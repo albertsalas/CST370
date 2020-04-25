@@ -1,5 +1,5 @@
 /*
- * HackerRank link: https://www.hackerrank.com/contests/cst370-s20-hw9/challenges/alien-alphabet/submissions/code/1323063620
+ * HackerRank link: https://www.hackerrank.com/contests/cst370-s20-hw9/challenges/alien-alphabet/submissions/code/1323104731
  * Title: hw9_2
  * Abstract: Displays the alphabetical order of characters for an alien language
  * Author: Albert Salas
@@ -23,14 +23,20 @@ void toLowercase(string &s) {
     }
 }
 
-bool connectedGraph(vector<int> &inDegree) {
-    for (int i : inDegree) {
-        if (i > 0) {
-            return true;
+void breadthFirstSearch(unordered_map<char, unordered_set<char>> &graph, vector<int> &mark, queue<char> q,
+                        vector<char> &visited) {
+    if (q.empty()) {
+        return;
+    }
+    for (auto &it : graph[q.front()]) {
+        if (mark[it - 'a'] == 0) {
+            mark[it - 'a'] = 1;
+            visited.push_back(it);
+            q.push(it);
         }
     }
-    cout << "Invalid input." << endl;
-    return false;
+    q.pop();
+    breadthFirstSearch(graph, mark, q, visited);
 }
 
 void topologicalSort(unordered_map<char, unordered_set<char>> &graph, vector<int> &inDegree) {
@@ -112,8 +118,19 @@ int main() {
             j++;
         }
     }
-    if (connectedGraph(inDegree)) {
+    char firstChar = words[0].at(0);
+    vector<char> visited;
+    visited.push_back(firstChar);
+    queue<char> q;
+    q.push(firstChar);
+    vector<int> mark(26);
+    mark[firstChar - 'a'] = 1;
+    // BFS to see if all vertices are reachable, if not then it's not possible to know the order of the alphabet
+    breadthFirstSearch(graph, mark, q, visited);
+    if (visited.size() == graph.size()) {
         topologicalSort(graph, inDegree);
+    } else {
+        cout << "Invalid input." << endl;
     }
     return 0;
 }
