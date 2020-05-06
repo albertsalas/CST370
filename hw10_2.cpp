@@ -27,7 +27,7 @@ public:
 
     void insertKey(int key) {
         auto *record = new Record(key);
-        int hashedKey = hashFunction(key, tableSize);
+        int hashedKey = hashFunction(key);
         // check if bucket is occupied
         if (hashTable[hashedKey] == nullptr) {
             hashTable[hashedKey] = record;
@@ -43,27 +43,31 @@ public:
                     i = 0;
                 }
                 while (i != hashedKey) {
-                    if (hashTable[i] == nullptr || hashTable[i]->state == 0) {
+                    if (i >= tableSize) {
+                        i = 0;
+                    }
+                    if (hashTable[i] == nullptr){
                         hashTable[i] = record;
                         currentSize++;
                         break;
                     }
-                    i++;
-                    if (i >= tableSize) {
-                        i = 0;
+                    if (hashTable[i]->state == 0) {
+                        hashTable[i] = record;
+                        break;
                     }
+                    i++;
                 }
             }
         }
         // check load factor
-        if (currentSize > tableSize / 2) {
+        if (currentSize > (double) tableSize / 2) {
             // rehash
             rehash();
         }
     }
 
     void displayStatus(int bucket) const {
-        if (hashTable[bucket] == nullptr) {
+        if (bucket < 0 || bucket >= tableSize || hashTable[bucket] == nullptr) {
             cout << "Empty" << endl;
         } else {
             cout << hashTable[bucket]->key;
@@ -78,7 +82,7 @@ public:
 
     void search(int key) const {
         cout << key;
-        int hashedKey = hashFunction(key, tableSize);
+        int hashedKey = hashFunction(key);
         // if bucket has any key
         if (hashTable[hashedKey] != nullptr) {
             if (hashTable[hashedKey]->key == key) {
@@ -91,16 +95,16 @@ public:
             } else {
                 // if bucket doesn't contain key, linear search values after bucket, looping back if necessary
                 for (int i = hashedKey + 1; i != hashedKey; i++) {
-                    if (hashTable[hashedKey]->key == key) {
-                        if (hashTable[hashedKey]->state == 1) {
+                    if (i >= tableSize) {
+                        i = 0;
+                    }
+                    if (hashTable[i]->key == key) {
+                        if (hashTable[i]->state == 1) {
                             cout << " Found" << endl;
                         } else {
                             cout << " Not found" << endl;
                         }
                         return;
-                    }
-                    if (i >= tableSize) {
-                        i = 0;
                     }
                 }
             }
@@ -109,15 +113,16 @@ public:
     }
 
     void deleteKey(int key) {
-        int hashedKey = hashFunction(key, tableSize);
-        if (hashTable[hashedKey] == nullptr) {
-            cout << key << " Not found";
-        } else {
+        int hashedKey = hashFunction(key);
+        if (hashTable[hashedKey] != nullptr) {
             if (hashTable[hashedKey]->key == key) {
                 hashTable[hashedKey]->state = 0;
             } else {
                 int i = hashedKey + 1;
                 while (i != hashedKey) {
+                    if (i >= tableSize) {
+                        i = 0;
+                    }
                     if (hashTable[i] != nullptr) {
                         if (hashTable[i]->key == key) {
                             hashTable[i]->state = 0;
@@ -126,17 +131,14 @@ public:
                         }
                     }
                     i++;
-                    if (i >= tableSize) {
-                        i = 0;
-                    }
                 }
             }
         }
     }
 
 private:
-    static int hashFunction(int key, int size) {
-        return key % size;
+    int hashFunction(int key) const {
+        return abs(key) % tableSize;
     }
 
     static bool isPrime(int value) {
@@ -162,11 +164,27 @@ private:
         tableSize = doublePrimeNumber(tableSize);
         vector<Record *> newHashTable(tableSize);
         for (Record *r : hashTable) {
+
             if (r != nullptr) {
-                int newBucket = hashFunction(r->key, tableSize);
-                newHashTable[newBucket] = r;
+                int newBucket = hashFunction(r->key);
+                // check if the new bucket isn't occupied already
+                if (newHashTable[newBucket] == nullptr) {
+                    newHashTable[newBucket] = r;
+                } else {
+                    // use linear probe if bucket is already taken
+                    for (int i = newBucket + 1; i != newBucket; i++) {
+                        if (i >= tableSize) {
+                            i = 0;
+                        }
+                        if (newHashTable[i] == nullptr) {
+                            newHashTable[i] = r;
+                            break;
+                        }
+                    }
+                }
             }
         }
+
         hashTable = newHashTable;
     }
 };
@@ -176,6 +194,9 @@ int main() {
     int numCommands;
     cin >> size >> numCommands;
     cin.ignore();
+    if (size <= 0) {
+        size = 1;
+    }
     HashTable hashTable = HashTable(size);
     vector<string> commands;
     for (int i = 0; i < numCommands; i++) {
@@ -183,6 +204,7 @@ int main() {
         getline(cin, command);
         commands.push_back(command);
     }
+
     for (const string &command : commands) {
         if (command.find("insert") != string::npos) {
             int key = stoi(command.substr(6, command.size()));
@@ -200,5 +222,6 @@ int main() {
             hashTable.deleteKey(key);
         }
     }
+
     return 0;
 }
